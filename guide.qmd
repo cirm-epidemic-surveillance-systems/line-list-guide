@@ -1,5 +1,5 @@
 ---
-title: Designing Line Lists for Epidemiological Analysis: A Practical Guide
+title: "Designing Line Lists for Epidemiological Analysis: A Practical Guide"
 ---
 
 Epidemiological line lists are a foundational tool for outbreak analytics, capturing individual-level data on cases and enabling the estimation of key quantities such as transmission rates, severity ratios, and delay distributions.
