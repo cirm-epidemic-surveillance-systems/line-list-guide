@@ -1,4 +1,11 @@
-impute_missing <- function(ll) {
+##' Imputes missing onset dates
+##'
+##' Sets missing onset dates to the date of reporting.
+##'
+##' @param ll Line list data frame
+##' @return A data frame with the same columns as the input line list
+##' @examples
+impute_missing_onset <- function(ll) {
   ll |>
     mutate(date_onset = if_else(
       is.na(date_onset),
