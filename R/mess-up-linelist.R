@@ -41,13 +41,14 @@ add_missing <- function(ll, prop = 0.2, threshold_days = 0L) {
 ##'   and the square root of the delay as standard deviation.
 ##' @return A data frame with the same columns as the input line list
 ##' @inheritParams impute_missing_onset
-date_noise <- function(ll, noise = \(n, delay) {
+date_noise <- function(ll, noise_func = \(n, delay) {
   rpois(n = n, lambda = delay)
 }) {
   ll |>
     mutate(
       date_onset = date_admission -
-        noise(n(), as.integer(date_admission - date_onset)))
+        noise_func(n(), as.integer(date_admission - date_onset))
+      )
 }
 
 ##' Round dates (due to poor recall)

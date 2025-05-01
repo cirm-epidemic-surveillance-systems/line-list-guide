@@ -59,7 +59,7 @@ get_delay_counts <- function(df, max_delay) {
 # Delay in admission counts
 delay_admission_counts <- delay_admission |>
   group_split(ll_source) |>
-  lapply(FUN = get_delay_counts, max_delay = 30)
+  lapply(FUN = get_delay_counts, max_delay = 90)
 
 names(delay_admission_counts) <- sapply(
   delay_admission_counts, function(x) x$ll_source[1]
@@ -86,7 +86,7 @@ delay_admission_estimates_natural <- delay_admission_pcd |>
 # Delay in death counts
 delay_death_counts <- delay_death |>
   group_split(ll_source) |>
-  lapply(FUN = get_delay_counts, max_delay = 90)
+  lapply(FUN = get_delay_counts, max_delay = 180)
 
 names(delay_death_counts) <- sapply(delay_death_counts, function(x) x$ll_source[1])
 

@@ -1,0 +1,179 @@
+---
+title: "Estimating delays from line list data with imputed symptom onset"
+---
+
+## Setup
+```{r}
+library(dplyr)
+library(ggplot2)
+source(here::here("R", "mess-up-linelist.R"))
+```
+
+## Preparing the data
+```{r}
+ll_clean <- readr::read_csv(here::here("data-raw", "clean_linelist.csv"))
+```
+
+```{r}
+# RNG for negative binomial distribution, mean and overdispersion parameterization
+rnbinom2 <- function(n, mu, inv_rho) {
+  rho = 1/inv_rho
+  rnbinom(n, size = rho, prob = rho / (mu + rho))
+}
+
+var(rnbinom2(10000, mu = 5, inv_rho = 1))
+
+```
+
+
+Creating messed-up line lists
+```{r}
+ll_all <- bind_rows(list(
+  "0" = ll_clean,
+  "0.1" = ll_clean |> date_noise(noise_func = \(n, delay) {rnbinom2(n = n, mu = delay, inv_rho = 0.1)}),
+  "0.5" = ll_clean |> date_noise(noise_func = \(n, delay) {rnbinom2(n = n, mu = delay, inv_rho = 0.5)}),
+  "1" = ll_clean |> date_noise(noise_func = \(n, delay) {rnbinom2(n = n, mu = delay, inv_rho = 1)}),
+  "2" = ll_clean |> date_noise(noise_func = \(n, delay) {rnbinom2(n = n, mu = delay, inv_rho = 2)})
+  ),
+  .id = "ll_source")
+```
+
+```{r}
+delay_admission <- ll_all |>
+  filter(!is.na(date_onset), !is.na(date_admission)) |>
+  mutate(delay = date_admission - date_onset)
+```
+
+```{r}
+delay_admission |> 
+  group_by(ll_source) |>
+  summarize(mean_delay = mean(delay, na.rm = TRUE),
+            median_delay = median(delay, na.rm = TRUE),
+            sd_delay = sd(delay, na.rm = TRUE))
+```
+
+
+```{r}
+delay_death <- ll_all |>
+  filter(!is.na(date_onset), outcome == "died", !is.na(date_outcome)) |>
+  mutate(delay = date_outcome - date_onset)
+```
+
+## Empirical plots
+
+### Onset to admission
+```{r}
+delay_admission |>
+  group_by(ll_source, delay) |>
+  summarise(n = n()) |>
+  ungroup() |> 
+  ggplot() +
+  geom_col(aes(x = delay, y = n, fill = ll_source), position = "dodge") +
+  facet_wrap(~ll_source) +
+  labs(x = "Delay (days)", y = "Number of cases") +
+  ggtitle("Delay between date of onset and date of admission") +
+  theme_minimal()
+```
+### Onset to death
+```{r}
+delay_death |>
+  group_by(ll_source, delay) |>
+  summarise(n = n()) |>
+  ungroup() |> 
+  ggplot(aes(x = delay, y = n)) +
+   geom_col(aes(x = delay, y = n, fill = ll_source), position = "dodge") +
+  facet_wrap(~ll_source) +
+  labs(x = "Delay (days)", y = "Number of cases") +
+  ggtitle("Delay between date of onset and date of death") +
+  theme_minimal()
+```
+## Parameter estimation
+```{r}
+source(here::here("R", "estimate_pcd.R"))
+```
+
+### Onset to admission
+```{r, fig.height = 8, fig.width = 6}
+c(delay_admission_estimates, delay_admission_estimates_natural) |> 
+  bind_rows(.id = "ll_source") |> 
+  mutate(ll_source = as.numeric(ll_source)) |> 
+  ggplot(aes(y = ll_source, color = ll_source == 0)) +
+  ggdist::geom_pointinterval(aes(x = median, xmin = q5, xmax = q95), orientation = "horizontal", linewidth = 0.3, pointsize = 2) +
+  facet_wrap(~variable, ncol = 1, scales = "free_x") +
+  scale_color_manual(values = c("black", "red")) +
+  labs(y = "Recall noise factor", x = "Value") +
+  ggtitle("Delay between date of onset and date of admission") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+### Onset to death
+
+```{r, fig.height = 8, fig.width = 6}
+c(delay_death_estimates, delay_death_estimates_natural) |> 
+  bind_rows(.id = "ll_source") |> 
+  mutate(ll_source = as.numeric(ll_source)) |>
+  ggplot(aes(y = ll_source, color = ll_source == 0)) +
+  ggdist::geom_pointinterval(aes(x = median, xmin = q5, xmax = q95), orientation = "horizontal", linewidth = 0.3, pointsize = 2) +
+  facet_wrap(~variable, ncol = 1, scales = "free_x") +
+  scale_color_manual(values = c("black", "red")) +
+  labs(y = "Recall noise factor", x = "Value") +
+  ggtitle("Delay between date of onset and date of death") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+## Estimated distribution
+
+### Onset to admission
+Density
+```{r}
+# simulate draws from estimated lognormal distribution
+ndraws <- 10000
+admission_dist_draws <- delay_admission_estimates |> lapply(FUN = function(estimates) data.frame(delay = rlnorm(n = ndraws,
+       meanlog = estimates |> filter(variable == "meanlog") |> pull(mean),
+       sdlog = estimates |> filter(variable == "sdlog") |>  pull(mean)
+  ))) |> bind_rows(.id = "ll_source")
+```
+
+```{r}
+delay_admission_stats <- admission_dist_draws |>
+  group_by(ll_source) |>
+  summarise(mean_delay = mean(delay, na.rm = TRUE),
+            median_delay = median(delay, na.rm = TRUE),
+            sd_delay = sd(delay, na.rm = TRUE))
+
+admission_dist_draws |>
+  ggplot() +
+  geom_density(aes(x=delay, color = ll_source)) +
+  labs(x = "Delay (days)", y = "Number of cases") +
+  ggtitle("Delay between date of onset and date of admission") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, 50))
+```
+
+
+### Onset to death
+```{r}
+# simulate draws from estimated lognormal distribution
+ndraws <- 10000
+death_dist_draws <- delay_death_estimates |> lapply(FUN = function(estimates) data.frame(delay = rlnorm(n = ndraws,
+       meanlog = estimates |> filter(variable == "meanlog") |> pull(mean),
+       sdlog = estimates |> filter(variable == "sdlog") |>  pull(mean)
+  ))) |> bind_rows(.id = "ll_source")
+```
+
+```{r}
+delay_death_stats <- death_dist_draws |>
+  group_by(ll_source) |>
+  summarise(mean_delay = mean(delay, na.rm = TRUE),
+            median_delay = median(delay, na.rm = TRUE),
+            sd_delay = sd(delay, na.rm = TRUE))
+
+death_dist_draws |>
+  ggplot() +
+  geom_density(aes(x=delay, color = ll_source)) +
+  labs(x = "Delay (days)", y = "Number of cases") +
+  ggtitle("Delay between date of onset and date of death") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, 40))
+```
