@@ -36,13 +36,56 @@ Date of symptom onset features in all analysis types outlined above. It is centr
 
 Although many recording challenges apply broadly to various epidemiological dates, we specifically highlight symptom onset due to its analytical importance and recording complexity.
 
-| Issue                              | Description                                                                                          | Potential Remedy                                                                                     |
-|-----------------------------------|------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| **Imputation and Default Values** | Symptom onset may be auto-filled (e.g., date of report), creating misleading delay distributions.   | Avoid silent imputation; explicitly flag imputed values and document imputation rules.               |
-| **Missingness**                   | Missing data may be ambiguous (e.g., not asked, asymptomatic, or forgotten).                         | Use structured missing codes; include a separate field indicating reason/status of symptom onset.    |
-| **Recall Bias**                   | Onset is more accurately recalled when recent, skewing the data toward shorter delays.               | Record date of assessment.           |
-| **Uncertainty**                   | Respondents may not recall precise dates.                                                            | Allow for date ranges or uncertainty flags.                                    |
-| **Resolution and Rounding**       | Onset dates may be rounded (e.g., “a week ago”), causing artificial heaping at 7/14-day intervals.   | Capture qualitative answers separately; allow for date reanges or uncertainty flags.                |
-| **Reporting Scheme Changes**      | Inclusion criteria may shift (e.g., only hospitalised cases recorded), affecting consistency.        | Maintain a clear data dictionary and timeline of reporting criteria and changes.                     |
-| **Inconsistent Symptom Definitions** | Definitions of onset may vary (e.g., first respiratory vs. rash symptom).                          | Standardise symptom criteria where possible; document differences across datasets.                   |
-| **Vagueness of 'Symptom Onset'**  | Multiple symptoms may begin at different times, affecting what is recorded as “onset.”              | Specify which symptoms qualify as onset; consider multiple onset fields for distinct symptom types.  |
+| Issue                              | Description                                                                                          | Impact / Bias                                                                                      |
+|-----------------------------------|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| **Imputation and Default Values** | Symptom onset may be auto-filled (e.g., set equal to date of report) without explicit flags.         | Artificially shortens delays; obscures true symptom timing; distorts time-sensitive analyses.       |
+| **Missingness**                   | Missing values may lack explanation—whether due to non-response, asymptomatic status, or omission.   | Reduces interpretability; introduces bias if missingness is non-random or varies over time.         |
+| **Recall Bias**                   | Individuals more accurately report recent symptom onset than distant events.                         | Over-representation of short delays; can skew epidemic curves and serial interval estimates.        |
+| **Uncertainty**                   | Onset dates may be approximate or poorly remembered.                                                  | Leads to false precision; suppresses uncertainty in models and inference.                           |
+| **Resolution and Rounding**       | Respondents often approximate dates (e.g., “about a week ago”), causing date heaping.                | Produces artificial spikes in symptom onset distribution; affects estimates of delay distributions. |
+| **Reporting Scheme Changes**      | Case definitions or reporting criteria may change over time (e.g., hospitalised-only cases).          | Breaks in temporal continuity; hinders comparison across epidemic phases.                           |
+| **Inconsistent Symptom Definitions** | Different datasets or teams may apply inconsistent criteria (e.g., respiratory vs. rash).          | Undermines comparability; adds noise to time series; complicates pooling data.                      |
+| **Vagueness of 'Symptom Onset'**  | Onset may refer to any of several symptoms, which may occur at different times.                      | Introduces ambiguity; weakens link between symptom onset and transmission or severity markers.      |
+
+# Recommendations
+
+1. **Clarify All Types of Missingness**
+   Use structured missing codes or additional questions to distinguish between values that are unknown, not applicable, not asked, or not yet observed. This applies across fields such as outcomes, exposures, and test results. For instance, a missing outcome could mean the case is unresolved, lost to follow-up, or deceased but not yet recorded.
+
+2. **Capture Outcome Status Carefully**
+   Track whether outcomes (e.g. death, recovery) are pending or final. Clearly flag records with incomplete follow-up to avoid bias in severity or time-to-event analyses.
+
+3. **Support Uncertainty in Dates**
+   Where exact dates are unknown, allow for ranges or include an uncertainty indicator. This avoids false precision in delay distributions and survival analyses.
+
+4. **Timestamp Field Updates**
+   Provide a time stamp for each data entry. For subsequent changes, provide information not just what values change, but when those changes occur—especially for time-sensitive fields like testing, admission, or classification status.
+
+5. **Document Data Collection Protocols and Changes**
+   Maintain metadata about how and when the data was collected, and note any shifts in reporting schemes, inclusion criteria, or field definitions over time.
+
+### Recommendations Specific to Symptom Onset Data
+
+1. **Avoid Hidden Imputation**
+   Do not auto-fill missing symptom onset with other dates (e.g., date of report) unless explicitly flagged and documented.
+
+2. **Use Specific Missingness Codes for Onset**
+   Differentiate between asymptomatic cases, respondents who were not asked, and cases where the respondent could not recall the date. Consider an additional field for “onset status.”
+
+3. **Record Date of Assessment**
+   Capture when the symptom onset was reported or assessed to help evaluate recall bias and reporting delays.
+
+4. **Allow for Uncertainty and Ranges**
+   Accept date ranges (e.g., 10–12 March) or use uncertainty flags when respondents are unsure of the exact onset date.
+
+5. **Flag Rounding or Heaping**
+   When onset is reported approximately (e.g., “about a week ago”), allow data entry systems to capture this explicitly and flag the record as approximate.
+
+6. **Standardise Onset Definitions**
+   Use clear guidance on what qualifies as “symptom onset” (e.g., first respiratory symptom vs. rash). If necessary, allow multiple onset fields for syndromes with distinct symptom phases.
+
+7. **Disaggregate Complex Presentations**
+   For illnesses with staged symptoms (e.g., fever followed by rash), consider recording separate onset dates for different key symptoms, particularly if they relate to transmission dynamics.
+
+8. **Track Changes in Reporting Practices**
+   Keep a record of changes in which cases are included (e.g., inclusion of only hospitalised cases), as this can significantly affect symptom onset distributions.
