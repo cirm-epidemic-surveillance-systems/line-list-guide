@@ -1,0 +1,36 @@
+---
+title: Useful line lists for outbreak analysis
+---
+
+# Types of analysis and the columns that they commonly use
+
+| Type of Analysis                               | Key Information Required                                                       |
+|----------------------------------------------- |------------------------------------------------------------------------------- |
+| **Severity**<br>(e.g., CFR, hospitalisation ratio) | Outcome data (hospitalisation, death), dates of symptom onset, admission, outcome |
+| **Nowcasting**<br>(delay-adjusted estimates)       | Outcome date (symptom onset, admission, death), date of report/entry, timestamps for record updates |
+| **Transmissibility (R_t)**                      | Date of symptom onset (or closest proxy to exposure), dates of reporting/testing |
+| **Serial Interval**                            | Dates of symptom onset for infector–infectee pairs                              |
+| **Incubation Period**                          | Date of exposure, date of symptom onset                                         |
+| **Health System Delays**<br>(onset-to-admission, onset-to-death, length-of-stay) | Dates of symptom onset, admission, discharge/death                              |
+
+Additional covariates (e.g., age, sex, comorbidities) are often critical for severity analysis and other detailed studies but are not included here to maintain clarity on core fields.
+
+# Example: key issues with symptom onset
+
+Date of symptom onset features in all analysis types outlined above. It is central to epidemiological analyses primarily because:
+
+1. It is often the observable infection-related event closest to the frequently unobserved date of exposure/infection.
+2. It directly relates to clinical severity and healthcare impact.
+
+Although many recording challenges apply broadly to various epidemiological dates, we specifically highlight symptom onset due to its analytical importance and recording complexity.
+
+| Issue                              | Description                                                                                          | Potential Remedy                                                                                     |
+|-----------------------------------|------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| **Imputation and Default Values** | Symptom onset may be auto-filled (e.g., date of report), creating misleading delay distributions.   | Avoid silent imputation; explicitly flag imputed values and document imputation rules.               |
+| **Missingness**                   | Missing data may be ambiguous (e.g., not asked, asymptomatic, or forgotten).                         | Use structured missing codes; include a separate field indicating reason/status of symptom onset.    |
+| **Recall Bias**                   | Onset is more accurately recalled when recent, skewing the data toward shorter delays.               | Record date of assessment; consider adjusting analyses for recency-related reporting bias.           |
+| **Uncertainty**                   | Respondents may not recall precise dates.                                                            | Allow for date ranges or uncertainty flags in the data structure.                                    |
+| **Resolution and Rounding**       | Onset dates may be rounded (e.g., “a week ago”), causing artificial heaping at 7/14-day intervals.   | Capture qualitative answers separately; flag or adjust for common rounding artefacts.                |
+| **Reporting Scheme Changes**      | Inclusion criteria may shift (e.g., only hospitalised cases recorded), affecting consistency.        | Maintain a clear data dictionary and timeline of reporting criteria and changes.                     |
+| **Inconsistent Symptom Definitions** | Definitions of onset may vary (e.g., first respiratory vs. rash symptom).                          | Standardise symptom criteria where possible; document differences across datasets.                   |
+| **Vagueness of 'Symptom Onset'**  | Multiple symptoms may begin at different times, affecting what is recorded as “onset.”              | Specify which symptoms qualify as onset; consider multiple onset fields for distinct symptom types.  |
