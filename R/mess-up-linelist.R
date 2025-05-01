@@ -16,25 +16,20 @@ impute_missing_onset <- function(ll) {
 ##' Adds missing onset dates
 ##'
 ##' @param prop Proportion of genuine missingness to add.
+##' @param threshold_days Number of days before the date of reporting that acts
+##'   as a threshold, missingness only applies for delays greater than this.
+##'   This serves as an implementation of recall bias
 ##' @inheritParams impute_missing_onset
-add_missing <- function(ll, prop = 0.2) {
+add_missing <- function(ll, prop = 0.2, threshold_days = 0L) {
   ll |>
     mutate(
       date_onset = if_else(
-        runif(n()) <= prop,
+        runif(n()) <= prop &
+        threshold_days < as.integer(date_reporting - date_onset),
         as.Date(NA_character_),
         date_onset
       )
     )
-}
-
-##' .. content for \description{} (no empty lines) ..
-##'
-##' @param ll Line list data frame
-##' @return A data frame with the same columns as the input line list
-##' @inheritParams impute_missing_onset
-recall_bias <- function(ll) {
-
 }
 
 ##' .. content for \description{} (no empty lines) ..
