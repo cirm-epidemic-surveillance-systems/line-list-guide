@@ -20,7 +20,7 @@ This guide focuses on practical recommendations to maximise the value of line li
 |----------------------------------------------- |------------------------------------------------------------------------------- |
 | **Severity**<br>(e.g., CFR, hospitalisation ratio) | Outcome data (hospitalisation, death), dates of symptom onset, admission, outcome |
 | **Nowcasting**<br>(delay-adjusted estimates)       | Outcome date (symptom onset, admission, death), date of report/entry, timestamps for record updates |
-| **Transmissibility (R_t)**                      | Date of symptom onset (or closest proxy to exposure), dates of reporting/testing |
+| **Transmissibility ($R_t$)**                      | Date of symptom onset (or closest proxy to exposure), dates of reporting/testing |
 | **Serial Interval**                            | Dates of symptom onset for infector–infectee pairs                              |
 | **Incubation Period**                          | Date of exposure, date of symptom onset                                         |
 | **Health System Delays**<br>(onset-to-admission, onset-to-death, length-of-stay) | Dates of symptom onset, admission, discharge/death                              |
