@@ -8,7 +8,7 @@ impute_missing_onset <- function(ll) {
   ll |>
     mutate(date_onset = if_else(
       is.na(date_onset),
-      date_reporting,
+      date_admission,
       date_onset
     ))
 }
@@ -25,7 +25,7 @@ add_missing <- function(ll, prop = 0.2, threshold_days = 0L) {
     mutate(
       date_onset = if_else(
         runif(n()) <= prop &
-        threshold_days < as.integer(date_reporting - date_onset),
+        threshold_days < as.integer(date_admission - date_onset),
         as.Date(NA_character_),
         date_onset
       )
@@ -46,8 +46,8 @@ date_noise <- function(ll, noise = \(n, delay) {
 }) {
   ll |>
     mutate(
-      date_onset = date_reporting -
-        noise(n(), as.integer(date_reporting - date_onset)))
+      date_onset = date_admission -
+        noise(n(), as.integer(date_admission - date_onset)))
 }
 
 ##' Round dates (due to poor recall)
@@ -60,8 +60,8 @@ round_dates <- function(ll, prop = 0.4) {
   ll |>
     mutate(
       date_onset = if_else(
-        runif(n()) <= prop & as.integer(date_reporting - date_onset) > 4,
-        date_reporting - round(as.integer(date_reporting - date_onset) / 7) * 7,
+        runif(n()) <= prop & as.integer(date_admission - date_onset) > 4,
+        date_admission - round(as.integer(date_admission - date_onset) / 7) * 7,
         date_onset
       )
     )
