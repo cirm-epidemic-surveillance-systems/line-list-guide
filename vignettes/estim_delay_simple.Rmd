@@ -1,0 +1,78 @@
+---
+title: "Example delay estimation from line list data"
+description: "Example delay estimation of delay between symptom onset and hospital admission and death"
+---
+
+## Setup
+```{r}
+library(dplyr)
+```
+
+## Loading the data
+```{r}
+ll_clean <- readr::read_csv(here::here("data-raw", "clean_linelist.csv"))
+ll_missing <- readr::read_csv(here::here("data-raw", "missing_linelist.csv"))
+```
+
+```{r}
+ll_missing <- ll_missing |> mutate(date_onset = date_onset_miss_rd)
+```
+
+Merging all line lists into one df
+```{r}
+ll_all <- bind_rows(list(clean = ll_clean, missing = ll_missing), .id = "ll_source")
+```
+
+## Empirical estimates
+
+### Onset to admission
+```{r}
+delay_admission <- ll_all |>
+  filter(!is.na(date_onset), !is.na(date_admission)) |>
+  mutate(delay = date_admission - date_onset)
+  
+delay_admission_stats <- delay_admission |>
+  group_by(ll_source) |>
+  summarise(mean_delay = mean(delay, na.rm = TRUE),
+            median_delay = median(delay, na.rm = TRUE),
+            sd_delay = sd(delay, na.rm = TRUE))
+
+delay_admission |>
+  group_by(ll_source, delay) |>
+  summarise(n = n()) |>
+  ungroup() |> 
+  ggplot(aes(x = delay, y = n)) +
+  geom_col() +
+  geom_vline(data = delay_admission_stats, aes(xintercept = mean_delay), linetype = "dashed", color = "red") +
+  geom_vline(data = delay_admission_stats, aes(xintercept = median_delay), linetype = "dashed", color = "blue") +
+  facet_wrap(~ll_source, ncol = 1) +
+  labs(x = "Delay (days)", y = "Number of cases") +
+  ggtitle("Delay between date of onset and date of admission") +
+  theme_minimal()
+```
+### Onset to death
+```{r}
+delay_death <- ll_all |>
+  filter(!is.na(date_onset), outcome == "died", !is.na(date_outcome)) |>
+  mutate(delay = date_outcome - date_onset)
+  
+delay_death_stats <- delay_death |>
+  group_by(ll_source) |>
+  summarise(mean_delay = mean(delay, na.rm = TRUE),
+            median_delay = median(delay, na.rm = TRUE),
+            sd_delay = sd(delay, na.rm = TRUE))
+
+delay_death |>
+  group_by(ll_source, delay) |>
+  summarise(n = n()) |>
+  ungroup() |> 
+  ggplot(aes(x = delay, y = n)) +
+  geom_col() +
+  geom_vline(data = delay_death_stats, aes(xintercept = mean_delay), linetype = "dashed", color = "red") +
+  geom_vline(data = delay_death_stats, aes(xintercept = median_delay), linetype = "dashed", color = "blue") +
+  facet_wrap(~ll_source, ncol = 1) +
+  labs(x = "Delay (days)", y = "Number of cases") +
+  ggtitle("Delay between date of onset and date of death") +
+  theme_minimal()
+```
+
