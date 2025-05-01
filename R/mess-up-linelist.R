@@ -42,7 +42,7 @@ add_missing <- function(ll, prop = 0.2, threshold_days = 0L) {
 ##' @return A data frame with the same columns as the input line list
 ##' @inheritParams impute_missing_onset
 date_noise <- function(ll, noise = \(n, delay) {
-    rpois(n = n, lambda = delay)
+  rpois(n = n, lambda = delay)
 }) {
   ll |>
     mutate(
@@ -50,13 +50,21 @@ date_noise <- function(ll, noise = \(n, delay) {
         noise(n(), as.integer(date_reporting - date_onset)))
 }
 
-##' .. content for \description{} (no empty lines) ..
+##' Round dates (due to poor recall)
 ##'
-##' @param ll Line list data frame
+##' @param prop Proportion of cases (more than 4 days since report) that are
+##'   rounded
 ##' @return A data frame with the same columns as the input line list
 ##' @inheritParams impute_missing_onset
-round_dates <- function(ll) {
-
+round_dates <- function(ll, prop = 0.4) {
+  ll |>
+    mutate(
+      date_onset = if_else(
+        runif(n()) <= prop & as.integer(date_reporting - date_onset) > 4,
+        date_reporting - round(as.integer(date_reporting - date_onset) / 7) * 7,
+        date_onset
+      )
+    )
 }
 
 ##' .. content for \description{} (no empty lines) ..
