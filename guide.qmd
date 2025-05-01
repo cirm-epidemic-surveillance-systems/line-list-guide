@@ -2,6 +2,18 @@
 title: Useful line lists for outbreak analysis
 ---
 
+Epidemiological line lists are a foundational tool for outbreak analytics, capturing individual-level data on cases and enabling the estimation of key quantities such as transmission rates, severity ratios, and delay distributions.
+They are often among the earliest and most detailed sources of information available during an emerging outbreak, forming the basis for real-time assessment and response.
+
+However, line lists are frequently developed with priorities that do not align with analytical needs.
+Fields may be inconsistently defined, data entry practices vary widely, and metadata—such as when a field was last updated or the source of a value—is often sparse or absent.
+These limitations can constrain the ability to carry out robust, timely analyses or to reconstruct how data evolved over time.
+
+Improving the structure and documentation of line lists—without overburdening data collectors—may therefore yield clear benefit.
+By offering clear, analysis-oriented guidance on which fields to prioritise, how to define and manage them, and how to capture updates systematically, we aim to support the creation of line lists that are not only operationally useful but also analytically powerful. 
+This guide focuses on practical recommendations to maximise the value of line lists for modelling and inference, particularly in fast-moving or resource-constrained settings.
+
+
 # Types of analysis and the columns that they commonly use
 
 | Type of Analysis                               | Key Information Required                                                       |
