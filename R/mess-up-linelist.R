@@ -1,5 +1,10 @@
 impute_missing <- function(ll) {
-
+  ll |>
+    mutate(date_onset = if_else(
+      is.na(date_onset),
+      date_reporting,
+      date_onset
+    ))
 }
 
 add_missing <- function(ll) {
