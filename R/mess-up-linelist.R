@@ -32,13 +32,22 @@ add_missing <- function(ll, prop = 0.2, threshold_days = 0L) {
     )
 }
 
-##' .. content for \description{} (no empty lines) ..
+##' Add noise to dates (due to poor recall)
 ##'
-##' @param ll Line list data frame
+##' @param noise_func Function to generate the noise; this should have two
+##'   inputs, `n` (the number of random variates to generate) and `delay` (the
+##'   observed delay between onset and report in days) and return `n` integers.
+##'   By default it applies a normal distribution with the given `delay` as mean
+##'   and the square root of the delay as standard deviation.
 ##' @return A data frame with the same columns as the input line list
 ##' @inheritParams impute_missing_onset
-date_noise <- function(ll) {
-
+date_noise <- function(ll, noise = \(n, delay) {
+    rpois(n = n, lambda = delay)
+}) {
+  ll |>
+    mutate(
+      date_onset = date_reporting -
+        noise(n(), as.integer(date_reporting - date_onset)))
 }
 
 ##' .. content for \description{} (no empty lines) ..
