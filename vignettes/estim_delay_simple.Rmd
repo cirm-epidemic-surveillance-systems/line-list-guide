@@ -15,12 +15,12 @@ ll_missing <- readr::read_csv(here::here("data-raw", "missing_linelist.csv"))
 ```
 
 ```{r}
-ll_missing <- ll_missing |> mutate(date_onset = date_onset_miss_rd)
+ll_imputed <- ll_missing |> mutate(date_onset = date_onset_miss_rd_impute_50)
 ```
 
 Merging all line lists into one df
 ```{r}
-ll_all <- bind_rows(list(clean = ll_clean, missing = ll_missing), .id = "ll_source")
+ll_all <- bind_rows(list(clean = ll_clean, imputed = ll_imputed), .id = "ll_source")
 ```
 
 ## Empirical estimates
