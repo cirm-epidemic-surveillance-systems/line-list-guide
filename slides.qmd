@@ -28,8 +28,43 @@ format:
 | **Recall Bias**                   | Individuals more accurately report recent symptom onset than distant events.                         | Over-representation of short delays; can skew epidemic curves and serial interval estimates.        |
 | **Uncertainty**                   | Onset dates may be approximate or poorly remembered.                                                  | Leads to false precision; suppresses uncertainty in models and inference.                           |
 | **Resolution and Rounding**       | Respondents often approximate dates (e.g., “about a week ago”), causing date heaping.                | Produces artificial spikes in symptom onset distribution; affects estimates of delay distributions. |
-| **Reporting Scheme Changes**      | Case definitions or reporting criteria may change over time (e.g., hospitalised-only cases).          | Breaks in temporal continuity; hinders comparison across epidemic phases.                           |
-| **Inconsistent Symptom Definitions** | Different datasets or teams may apply inconsistent criteria (e.g., respiratory vs. rash).          | Undermines comparability; adds noise to time series; complicates pooling data.                      |
-| **Vagueness of 'Symptom Onset'**  | Onset may refer to any of several symptoms, which may occur at different times.                      | Introduces ambiguity; weakens link between symptom onset and transmission or severity markers.      |
+
+# Analysis plan
+
+1. Create "perfect" line list data (using *simulist*)
+2. Mess up
+3. Analyse impact on estimates of delay distributions (using *primarycensored*)
 
 # Preliminary results
+
+### Imputation and default values (messed up)
+
+![](vignettes/figures/ll_mess_impute_empirical.png)
+
+### Imputation and default values (impact)
+
+![](vignettes/figures/ll_mess_impute_estimates.png)
+
+### Missingness and recall bias (messed up)
+
+![](vignettes/figures/ll_mess_missing_empirical.png)
+
+### Missingness and recall bias (impact)
+
+![](vignettes/figures/ll_mess_missing_estimates.png)
+
+### Uncertainty (messed up)
+
+![](vignettes/figures/ll_mess_noise_empirical.png)
+
+### Uncertainty (impact)
+
+![](vignettes/figures/ll_mess_noise_estimates.png)
+
+### Resolution and rounding (messed up)
+
+![](vignettes/figures/ll_mess_round_empirical.png)
+
+### Resolution and rounding (impact)
+
+![](vignettes/figures/ll_mess_round_estimates.png)
