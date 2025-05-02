@@ -93,7 +93,7 @@ source(here::here("R", "estimate_pcd.R"))
 ```
 
 ### Onset to admission
-```{r, fig.height = 8, fig.width = 6}
+```{r fig_param_estimates_admission, fig.height = 8, fig.width = 6}
 c(delay_admission_estimates, delay_admission_estimates_natural) |> 
   bind_rows(.id = "ll_source") |> 
   mutate(ll_source = as.numeric(ll_source)) |> 
