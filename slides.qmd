@@ -68,3 +68,36 @@ format:
 ### Resolution and rounding (impact)
 
 ![](vignettes/figures/ll_mess_round_estimates.png)
+
+# Next steps
+
+1. Write up Review for Onset of disease
+1. Extend to Symptom definition bias
+    i. Use datasets with detailed symptom information (some available from university hospitals)
+    i. Test for impact
+    i. Recommendations for symptom definition bias, e.g. augment WHO guidelines with more detailed onset of symptoms definition (specific combinations of symptoms)
+1. Extend to other variables (clusters)
+    i. Literature Reviews
+    i. List Biases
+    i. Test for Impact
+    i. Recommendations
+
+# Next steps (continued)
+
+4. Extend Simulation/Testing framework
+    i. Define and describe a perfect linelist
+    i. Extend generation of perfect linelist with further variables
+    i. Implement more biases (screwing with linelist)
+    i. Provide as a package
+1. Write up guideline/paper
+    i. describe the process
+    i. Summarize the findings from the different variables/biases/use cases
+    i. Tables for matching use cases and variables
+    i. Tables listing biases, impact, recommendation
+    i. A checklist to self-evaluate linelist (for data manager)
+
+# Next steps (continued)
+
+6. Draft Protocol on how to log date of onset of symptoms
+1. Draft Interview questions/scripts for Data Collectors
+
