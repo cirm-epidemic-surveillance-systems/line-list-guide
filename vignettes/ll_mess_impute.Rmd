@@ -1,5 +1,5 @@
 ---
-title: "Estimating delays from line list data with imputed symptom onset"
+title: "Estimating delays from line list data with imputed symptom onset date"
 ---
 
 ## Setup
