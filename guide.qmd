@@ -89,3 +89,9 @@ Although many recording challenges apply broadly to various epidemiological date
 
 8. **Track Changes in Reporting Practices**
    Keep a record of changes in which cases are included (e.g., inclusion of only hospitalised cases), as this can significantly affect symptom onset distributions.
+
+9. **Create a timeline sequence**
+ Capture exposure and symptoms timeline by creating a sequence. For example, Exposure date → first mild symptom → first major symptom → healthcare visit → hospitalization
+
+10. **Geo-tag Onset Context**
+Capture where the case was physically located when symptoms began (e.g., home, work, travel), especially useful for spatial-temporal modeling.
