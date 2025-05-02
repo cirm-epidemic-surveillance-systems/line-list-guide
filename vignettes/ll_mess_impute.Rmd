@@ -72,7 +72,7 @@ delay_death |>
   theme_minimal()
 ```
 ## Parameter estimation
-```{r}
+```{r, include=FALSE, cache=TRUE}
 source(here::here("R", "estimate_pcd.R"))
 ```
 
