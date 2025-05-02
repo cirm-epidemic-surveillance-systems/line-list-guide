@@ -1,0 +1,35 @@
+---
+title: "Designing Line Lists for Epidemiological Analysis: A Practical Guide"
+format:
+  revealjs:
+    slide-level: 3
+    preview-links: auto
+    center: true
+    smaller: true
+---
+
+### Types of analysis and the columns that they commonly use
+
+| Type of Analysis                               | Key Information Required                                                       |
+|----------------------------------------------- |------------------------------------------------------------------------------- |
+| **Severity**<br>(e.g., CFR, hospitalisation ratio) | Outcome data (hospitalisation, death), dates of symptom onset, admission, outcome |
+| **Nowcasting**<br>(delay-adjusted estimates)       | Outcome date (symptom onset, admission, death), date of report/entry, timestamps for record updates |
+| **Transmissibility ($R_t$)**                      | Date of symptom onset (or closest proxy to exposure), dates of reporting/testing |
+| **Serial Interval**                            | Dates of symptom onset for infector–infectee pairs                              |
+| **Incubation Period**                          | Date of exposure, date of symptom onset                                         |
+| **Health System Delays**<br>(onset-to-admission, onset-to-death, length-of-stay) | Dates of symptom onset, admission, discharge/death                              |
+
+### Example: key issues with symptom onset
+
+| Issue                              | Description                                                                                          | Impact / Bias                                                                                      |
+|-----------------------------------|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| **Imputation and Default Values** | Symptom onset may be auto-filled (e.g., set equal to date of report) without explicit flags.         | Artificially shortens delays; obscures true symptom timing; distorts time-sensitive analyses.       |
+| **Missingness**                   | Missing values may lack explanation—whether due to non-response, asymptomatic status, or omission.   | Reduces interpretability; introduces bias if missingness is non-random or varies over time.         |
+| **Recall Bias**                   | Individuals more accurately report recent symptom onset than distant events.                         | Over-representation of short delays; can skew epidemic curves and serial interval estimates.        |
+| **Uncertainty**                   | Onset dates may be approximate or poorly remembered.                                                  | Leads to false precision; suppresses uncertainty in models and inference.                           |
+| **Resolution and Rounding**       | Respondents often approximate dates (e.g., “about a week ago”), causing date heaping.                | Produces artificial spikes in symptom onset distribution; affects estimates of delay distributions. |
+| **Reporting Scheme Changes**      | Case definitions or reporting criteria may change over time (e.g., hospitalised-only cases).          | Breaks in temporal continuity; hinders comparison across epidemic phases.                           |
+| **Inconsistent Symptom Definitions** | Different datasets or teams may apply inconsistent criteria (e.g., respiratory vs. rash).          | Undermines comparability; adds noise to time series; complicates pooling data.                      |
+| **Vagueness of 'Symptom Onset'**  | Onset may refer to any of several symptoms, which may occur at different times.                      | Introduces ambiguity; weakens link between symptom onset and transmission or severity markers.      |
+
+# Preliminary results
