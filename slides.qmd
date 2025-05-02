@@ -19,7 +19,9 @@ format:
 | **Incubation Period**                          | Date of exposure, date of symptom onset                                         |
 | **Health System Delays**<br>(onset-to-admission, onset-to-death, length-of-stay) | Dates of symptom onset, admission, discharge/death                              |
 
-### Example: key issues with symptom onset
+# Example: key issues with symptom onset
+
+###
 
 | Issue                              | Description                                                                                          | Impact / Bias                                                                                      |
 |-----------------------------------|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
