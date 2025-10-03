@@ -4,6 +4,7 @@ title: "Estimating delays from line list data with rounding of symptom onset dat
 
 ## Setup
 ```{r}
+knitr::opts_chunk$set(cache = TRUE)
 library(dplyr)
 library(ggplot2)
 source(here::here("R", "mess-up-linelist.R"))
