@@ -1,0 +1,98 @@
+---
+title: "Examples of using the messy_linelist class"
+---
+
+## Setup
+```{r}
+library(dplyr)
+library(ggplot2)
+source(here::here("R", "messy-linelist.R"))
+```
+
+## Loading the true linelist
+```{r}
+ll_clean <- readr::read_csv(here::here("data-raw", "clean_linelist.csv"))
+```
+
+## Basic functions
+
+Setup a messy linelist
+```{r}
+ll <- new_messy_linelist(ll_clean)
+```
+
+Get different version of the linelist (you will get a copy)
+```{r}
+get_messy(ll) # current messy linelist
+get_true(ll) # original clean linelist
+get_full(ll) # both messy and original columns
+```
+
+Print line list
+```{r}
+print(ll) # by default, the messy version gets printed
+```
+
+## Missingness and imputation
+
+Date of symptom onset missing with certain probability, and imputed using the date of report
+```{r}
+ll <- new_messy_linelist(ll_clean)
+be_missing(ll, "date_onset", prob = 0.5)
+do_impute_from_other(ll, "date_onset", "date_reporting")
+ll
+```
+
+Date of symptom onset missing - with higher probability if not hospitalized - and imputed using the date of report
+```{r}
+ll <- new_messy_linelist(ll_clean)
+be_missing(ll, "date_onset", prob = 0.8, rows = is.na(get_true(ll)[,"date_admission"])) # not hospitalized
+be_missing(ll, "date_onset", prob = 0.1, rows = !is.na(get_true(ll)[,"date_admission"])) # hospitalized
+do_impute_from_other(ll, "date_onset", "date_reporting")
+ll
+```
+
+Date of report missing with certain probability, and imputed using the date of admission or date of outcome (whichever is first available)
+```{r}
+ll <- new_messy_linelist(ll_clean)
+be_missing(ll, "date_reporting", prob = 0.5)
+do_coalesce(ll , "date_reporting", c("date_reporting", "date_admission", "date_outcome"))
+ll
+```
+
+## Uncertain dates
+
+Date of onset is uncertain range with standard deviation of 2 days, and resolved to the minimum date in the range
+```{r}
+ll <- new_messy_linelist(ll_clean)
+be_uncertain_date(ll, col = "date_onset", col_latest = "date_reporting", sd = 2)
+do_resolve_uncertain_date(ll, col = "date_onset", method = "min")
+ll
+```
+
+Date of onset is uncertain range in bins of 7 days going back from the date of report (one week ago, two weeks ago, ...) and resolved to the middle of the range
+```{r}
+ll <- new_messy_linelist(ll_clean)
+be_uncertain_date_week(ll, col = "date_onset", col_reference = "date_reporting")
+do_resolve_uncertain_date(ll, col = "date_onset", method = "middle")
+ll
+```
+
+## More functions
+
+Print logged history of messy changes
+```{r}
+ll <- new_messy_linelist(ll_clean)
+be_missing(ll, "date_onset", prob = 0.5)
+be_uncertain_date_week(ll, col = "date_onset", col_reference = "date_reporting")
+do_resolve_uncertain_date(ll, col = "date_onset", method = "middle")
+
+get_ml_history(ll)
+```
+
+Let certain fields become hidden in the messy linelist
+```{r}
+ll <- new_messy_linelist(ll_clean)
+be_hidden(ll, cols = c("case_name", "sex", "age"))
+ll
+```
