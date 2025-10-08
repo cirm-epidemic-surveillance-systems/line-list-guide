@@ -81,34 +81,17 @@ format:
 - Onset defined as first symptom vs. onset defined as first severe symptom
 ![](vignettes/figures/issue_symptom_definition.png)
 
-# Next steps
+### Next steps
 
-1.  Write up Review for Onset of disease
-2.  Extend to Symptom definition bias
-    i.  Use datasets with detailed symptom information (some available from university hospitals)
-    ii. Test for impact
-    iii. Recommendations for symptom definition bias, e.g. augment WHO guidelines with more detailed onset of symptoms definition (specific combinations of symptoms)
-3.  Extend to other variables (clusters)
-    i.  Literature Reviews
-    ii. List Biases
-    iii. Test for Impact
-    iv. Recommendations
-
-# Next steps (continued)
-
-4.  Extend Simulation/Testing framework
-    i.  Define and describe a perfect linelist
-    ii. Extend generation of perfect linelist with further variables
-    iii. Implement more biases (screwing with linelist)
-    iv. Provide as a package
+1.  Finalize review for uses of symptom onset information
+2.  Refine current simulation of line list issues
+    i.  More realistic features / Alternative line list simulators
+3.  Identify further key issue to include in simulations
+    i. Extend generative model
+4.  Review details of symptom onset reporting
+    i.  Investigate real-world datasets with detailed symptom information (some available from university hospitals)
+    ii. Real-world case report forms / recommendations for symptom definitions, e.g. WHO guidelines
 5.  Write up guideline/paper
-    i.  describe the process
-    ii. Summarize the findings from the different variables/biases/use cases
-    iii. Tables for matching use cases and variables
-    iv. Tables listing biases, impact, recommendation
-    v.  A checklist to self-evaluate linelist (for data manager)
-
-# Next steps (continued)
-
-6.  Draft Protocol on how to log date of onset of symptoms
-7.  Draft Interview questions/scripts for Data Collectors
+    i. summarize the findings from the review and simulations
+    ii. create illustrative figures
+    ii.  create a checklist to self-evaluate linelist (for data manager)
