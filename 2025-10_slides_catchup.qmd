@@ -1,0 +1,114 @@
+---
+title: "Topic 4: Epi line lists"
+subtitle: "Designing Line Lists for Epidemiological Analysis: A Practical Guide"
+format:
+  revealjs:
+    slide-level: 3
+    preview-links: auto
+    center: true
+    smaller: true
+---
+
+### Recap: Types of analysis and the columns that they commonly use
+
+| Type of Analysis | Key Information Required |
+|---------------------------|---------------------------------------------|
+| **Severity**<br>(e.g., CFR, hospitalisation ratio) | Outcome data (hospitalisation, death), dates of symptom onset, admission, outcome |
+| **Nowcasting**<br>(delay-adjusted estimates) | Outcome date (symptom onset, admission, death), date of report/entry, timestamps for record updates |
+| **Transmissibility (**$R_t$) | Date of symptom onset (or closest proxy to exposure), dates of reporting/testing |
+| **Serial Interval** | Dates of symptom onset for infector–infectee pairs |
+| **Incubation Period** | Date of exposure, date of symptom onset |
+| **Health System Delays**<br>(onset-to-admission, onset-to-death, length-of-stay) | Dates of symptom onset, admission, discharge/death |
+
+### Recap: Types of analysis and the columns that they commonly use
+
+| Type of Analysis | Key Information Required |
+|---------------------------|---------------------------------------------|
+| **Severity**<br>(e.g., CFR, hospitalisation ratio) | Outcome data (hospitalisation, death), dates of **symptom onset**, admission, outcome |
+| **Nowcasting**<br>(delay-adjusted estimates) | Outcome date (**symptom onset**, admission, death), date of report/entry, timestamps for record updates |
+| **Transmissibility (**$R_t$) | Date of **symptom onset** (or closest proxy to exposure), dates of reporting/testing |
+| **Serial Interval** | Dates of **symptom onset** for infector–infectee pairs |
+| **Incubation Period** | Date of exposure, date of **symptom onset** |
+| **Health System Delays**<br>(onset-to-admission, onset-to-death, length-of-stay) | Dates of **symptom onset**, admission, discharge/death |
+
+# Example: key issues with symptom onset
+
+### 
+
+| Issue | Description | Impact / Bias |
+|----------------|----------------------------|----------------------------|
+| **Imputation and Default Values** | Symptom onset may be auto-filled (e.g., set equal to date of report) without explicit flags. | Artificially shortens delays; obscures true symptom timing; distorts time-sensitive analyses. |
+| **Missingness** | Missing values lack explanation (e.g. non-response, asymptomatic status, ...) | Reduces interpretability; introduces bias if missingness is non-random or varies over time. |
+| **~~Recall Bias~~** | ~~Individuals more accurately report recent symptom onset than distant events.~~ | ~~Over-representation of short delays; skewed epidemic curves 7 serial interval estimates.~~ |
+| **Uncertainty** | Onset dates approximate / poorly remembered. | False precision; uncertainty in models suppressed. |
+| **Resolution and Rounding** | Respondents often approximate dates (e.g., “about a week ago”), causing date heaping. | Artificial spikes in symptom onset distribution; affects estimates of delay distributions. |
+| **Inconsistent definitions** | Date of onset may refer to different types of symptoms | Unclear interpretation of delays, def. changes cause breakpoints  |
+
+# Analysis plan
+
+* Create "perfect" line list data (using *simulist*)
+* Add realism (missingness, uncertain dates, multiple symptoms)
+* Analyse impact on estimated delay distributions (symptom onset to admission)
+  * Use *primarycensored*
+  * Naive resolution vs. correct modeling
+
+# New results
+
+### Activity
+![](vignettes/figures/repo_activity.png)
+
+### Simulating linelists
+- simulating additional features on top of simulist output
+  - asymptomatic status
+  - multiple symptom types
+- `messy_linelist` class
+  - typical reporting issues (missingness, date ranges, ...)
+  - typical manipulations (imputation, resolving date ranges, coalescing)
+
+### Imputation
+- 40% of cases asymptomatic, 20% of symptomatic cases missing date of symptom onset
+- Ad-hoc imputation using date of report vs. missingness through primary event window
+
+![](vignettes/figures/issue_imputation.png)
+
+### Uncertainty / resolution
+- Onset reported as 1 week ago, 2 weeks ago, ...
+- Resolved to 7 days ago, 14 days ago, ... vs. Model with primary event window
+![](vignettes/figures/issue_uncertain_dates.png)
+
+### Inconsistent definitions
+- Simulated mild and severe symptoms, mild symptoms may appear before severe
+- Onset defined as first symptom vs. onset defined as first severe symptom
+![](vignettes/figures/issue_symptom_definition.png)
+
+# Next steps
+
+1.  Write up Review for Onset of disease
+2.  Extend to Symptom definition bias
+    i.  Use datasets with detailed symptom information (some available from university hospitals)
+    ii. Test for impact
+    iii. Recommendations for symptom definition bias, e.g. augment WHO guidelines with more detailed onset of symptoms definition (specific combinations of symptoms)
+3.  Extend to other variables (clusters)
+    i.  Literature Reviews
+    ii. List Biases
+    iii. Test for Impact
+    iv. Recommendations
+
+# Next steps (continued)
+
+4.  Extend Simulation/Testing framework
+    i.  Define and describe a perfect linelist
+    ii. Extend generation of perfect linelist with further variables
+    iii. Implement more biases (screwing with linelist)
+    iv. Provide as a package
+5.  Write up guideline/paper
+    i.  describe the process
+    ii. Summarize the findings from the different variables/biases/use cases
+    iii. Tables for matching use cases and variables
+    iv. Tables listing biases, impact, recommendation
+    v.  A checklist to self-evaluate linelist (for data manager)
+
+# Next steps (continued)
+
+6.  Draft Protocol on how to log date of onset of symptoms
+7.  Draft Interview questions/scripts for Data Collectors
