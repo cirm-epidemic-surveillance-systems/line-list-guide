@@ -1,0 +1,137 @@
+---
+title: "Estimating delays from line list data with imputed symptom onset date"
+---
+
+## Setup
+```{r}
+knitr::opts_chunk$set(cache = TRUE)
+library(dplyr)
+library(ggplot2)
+source(here::here("R", "messy-linelist.R"))
+
+library(primarycensored)
+library(cmdstanr)
+```
+
+## Primarycensored setup
+```{r}
+pcd_model <- pcd_cmdstan_model(cpp_options = list(stan_threads = FALSE))
+```
+```{r}
+pcd_data_function <- function(delay_data) {
+  pcd_data <- pcd_as_stan_data(
+    delay_data,
+    delay = "observed_delay",
+    delay_upper = "observed_delay_upper",
+    relative_obs_time = "D",
+    pwindow = "pwindow",
+    dist_id = pcd_stan_dist_id("lognormal", "delay"),
+    primary_id = pcd_stan_dist_id("uniform", "primary"),
+    param_bounds = list(lower = c(-Inf, 0), upper = c(Inf, Inf)),
+    primary_param_bounds = list(lower = numeric(0), upper = numeric(0)),
+    priors = list(location = c(1, 0.5), scale = c(1, 0.5)),
+    primary_priors = list(location = numeric(0), scale = numeric(0)),
+    use_reduce_sum = FALSE # use within chain parallelisation
+  )
+}
+```
+
+## Data preparation
+```{r}
+ll_clean <- readr::read_csv(here::here("data-raw", "clean_linelist.csv"))
+```
+
+Setup a messy linelist
+```{r}
+ll <- new_messy_linelist(ll_clean |> filter(asymptomatic == FALSE))
+be_uncertain_date_week(ll, col = "date_onset", col_reference = "date_reporting") # date of onset is uncertain range in bins of 7 days going back from the date of report (one week ago, two weeks ago, ...)
+```
+
+## Estimating the onset to admission delay distribution
+
+### Messy analysis: Resolve ad-hoc to the earliest date (min)
+```{r}
+ll_messy <- copy(ll)
+do_resolve_uncertain_date(ll_messy, col = "date_onset", method = "min")
+delay_data <- ll_messy |> 
+  mutate(delay = as.numeric(date_admission - date_onset)) |>
+  filter(delay >= 0) |>
+  group_by(delay) |>
+  summarise(n = n()) |>
+  ungroup() |>
+  transmute(
+    observed_delay = delay,
+    observed_delay_upper = delay + 1,
+    pwindow = 1,
+    D = max(delay, na.rm = TRUE) + 2,
+    n = n
+    )
+
+pcd_fit_messy <- pcd_model$sample(
+  data = pcd_data_function(delay_data),
+  chains = 4,
+  parallel_chains = 2, # Run 2 chains in parallel
+  threads_per_chain = 2, # Use 2 cores per chain
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+### Correct analysis
+do not resolve naively, instead model date range:
+- earliest onset: start of week
+- latest onset: end of week
+- date of admission: known (1 day censoring)
+```{r}
+ll_correct <- copy(ll)
+ll_correct[, date_onset_lower := date_onset]
+ll_correct[, date_onset_upper := date_onset]
+do_resolve_uncertain_date(ll_correct, col = "date_onset_lower", method = "min")
+do_resolve_uncertain_date(ll_correct, col = "date_onset_upper", method = "max")
+
+delay_data <- ll_correct |> 
+  filter(!is.na(date_onset), !is.na(date_admission)) |>
+  mutate(delay = as.numeric(date_admission - date_onset_lower)) |>
+  mutate(pwindow = as.numeric(date_onset_upper - date_onset_lower) + 1) |> 
+  filter(delay >= 0) |>
+  group_by(delay, pwindow) |>
+  summarise(n = n()) |>
+  ungroup() |>
+  transmute(
+    observed_delay = delay,
+    observed_delay_upper = delay + 1,
+    pwindow = pwindow,
+    D = max(delay, na.rm = TRUE) + 2,
+    n = n
+    )
+
+pcd_fit_correct <- pcd_model$sample(
+  data = pcd_data_function(delay_data),
+  chains = 4,
+  parallel_chains = 2, # Run 2 chains in parallel
+  threads_per_chain = 2, # Use 2 cores per chain
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+## Results
+```{r}
+rvars <- lapply(list(pcd_fit_messy, pcd_fit_correct), function(x) posterior::as_draws_rvars(x$draws("params")))
+
+results_df <- data.frame(
+  Estimate = c("Ad-hoc resolution", "Model with censoring"),
+  mean_delay = t(do.call(cbind, lapply(rvars, function(x) exp(x$params[[1]] + x$params[[2]]^2 / 2))))
+)
+
+ggplot(results_df) +
+  ggdist::stat_halfeye(aes(fill = Estimate, color = Estimate, xdist = mean_delay), alpha = 0.6) +
+  geom_vline(xintercept = exp(1.5 + 0.5^2 / 2), color = "black", linetype = "dashed") +
+  scale_color_manual(values = c("#800000", "#125c87")) +
+  scale_fill_manual(values = c("#a00000", "#1a80bb")) +
+  theme_bw() +
+  theme(legend.position = "top") +
+  labs(x = "Mean delay (days)", y = "Density")
+
+ggsave(here::here("vignettes", "figures", "issue_uncertain_dates.png"), width = 10, height = 6)
+```
