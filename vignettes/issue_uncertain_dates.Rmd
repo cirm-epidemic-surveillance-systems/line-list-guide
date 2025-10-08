@@ -115,20 +115,56 @@ pcd_fit_correct <- pcd_model$sample(
 )
 ```
 
+Perfect data
+```{r}
+ll_perfect <- get_true(ll)
+
+delay_data <- ll_perfect |> 
+  mutate(delay = as.numeric(date_admission - date_onset)) |>
+  filter(delay >= 0) |>
+  group_by(delay) |>
+  summarise(n = n()) |>
+  ungroup() |>
+  transmute(
+    observed_delay = delay,
+    observed_delay_upper = delay + 1,
+    pwindow = 1,
+    D = max(delay, na.rm = TRUE) + 2,
+    n = n
+    )
+
+pcd_fit_perfect <- pcd_model$sample(
+  data = pcd_data_function(delay_data),
+  chains = 4,
+  parallel_chains = 2, # Run 2 chains in parallel
+  threads_per_chain = 2, # Use 2 cores per chain
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+
 ## Results
 ```{r}
-rvars <- lapply(list(pcd_fit_messy, pcd_fit_correct), function(x) posterior::as_draws_rvars(x$draws("params")))
+pcd_fit_messy$summary(c("params[1]", "params[2]"))
+pcd_fit_correct$summary(c("params[1]", "params[2]"))
+pcd_fit_perfect$summary(c("params[1]", "params[2]"))
+```
+
+
+```{r}
+rvars <- lapply(list(pcd_fit_messy, pcd_fit_correct, pcd_fit_perfect), function(x) posterior::as_draws_rvars(x$draws("params")))
 
 results_df <- data.frame(
-  Estimate = c("Ad-hoc resolution", "Model with censoring"),
+  Estimate = forcats::fct_inorder(c("Ad-hoc resolution", "Model with censoring", "Exact dates available")),
   mean_delay = t(do.call(cbind, lapply(rvars, function(x) exp(x$params[[1]] + x$params[[2]]^2 / 2))))
 )
 
 ggplot(results_df) +
   ggdist::stat_halfeye(aes(fill = Estimate, color = Estimate, xdist = mean_delay), alpha = 0.6) +
   geom_vline(xintercept = exp(1.5 + 0.5^2 / 2), color = "black", linetype = "dashed") +
-  scale_color_manual(values = c("#800000", "#125c87")) +
-  scale_fill_manual(values = c("#a00000", "#1a80bb")) +
+  scale_color_manual(values = c("#800000", "#125c87", "darkgreen")) +
+  scale_fill_manual(values = c("#a00000", "#1a80bb", "darkgreen")) +
   theme_bw() +
   theme(legend.position = "top") +
   labs(x = "Mean delay (days)", y = "Density")
