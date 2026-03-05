@@ -80,17 +80,17 @@ get_true <- function(x, rows = NULL) {
   stopifnot(is_messy_linelist(x))
   true <- get_true_cols(x)
   true_suffix <- get_mll_true_suffix(x)
-  
+
   if (is.null(rows)) {
     result <- copy(as.data.table(x[, ..true]))
   } else {
     result <- copy(as.data.table(x[rows, ..true]))
   }
-  
+
   # Remove the true suffix from column names
   original_names <- sub(paste0(true_suffix, "$"), "", names(result))
   setnames(result, names(result), original_names)
-  
+
   return(result)
 }
 
@@ -172,13 +172,13 @@ be_hidden <- function(x, cols) {
 #' \dontrun{
 #' # Introduce 20% missing values in the age column
 #' mll %>% be_missing("age", prob = 0.2)
-#' 
+#'
 #' # With reproducible seed
 #' mll %>% be_missing("symptoms", prob = 0.15, rng_seed = 123)
-#' 
+#'
 #' # Target specific rows by index
 #' mll %>% be_missing("age", prob = 0.5, rows = c(1, 3, 5))
-#' 
+#'
 #' # Target rows using logical vector
 #' mll %>% be_missing("age", prob = 0.3, rows = mll$gender == "female")
 #' }
@@ -188,7 +188,7 @@ be_missing <- function(x, col, prob, rows = NULL, rng_seed = NULL) {
   stopifnot(is_messy_linelist(x))
   if (col %in% get_true_cols(x)) stop("Cannot target true column.")
   if (!is.null(rng_seed)) set.seed(rng_seed)
-  
+
   # Determine which rows to consider
   if (is.null(rows)) {
     candidate_rows <- 1:nrow(x)
@@ -207,11 +207,11 @@ be_missing <- function(x, col, prob, rows = NULL, rng_seed = NULL) {
   } else {
     stop("rows must be NULL, a logical vector, or a numeric vector of row indices")
   }
-  
+
   mask <- runif(length(candidate_rows)) < prob
   if (!any(mask)) return(invisible(x))
   target <- candidate_rows[mask]
-  
+
   # attempt to preserve column type for NA assignment
   cl <- class(x[[col]])
   na_val <- switch(
@@ -259,10 +259,10 @@ be_missing <- function(x, col, prob, rows = NULL, rng_seed = NULL) {
 #' \dontrun{
 #' # Create uncertain date ranges with 3-day standard deviation
 #' mll %>% be_uncertain_date("date_onset", sd = 3)
-#' 
+#'
 #' # With upper bound truncation and seed
-#' mll %>% be_uncertain_date("date_onset", sd = 2, 
-#'                          col_latest = "date_interview", 
+#' mll %>% be_uncertain_date("date_onset", sd = 2,
+#'                          col_latest = "date_interview",
 #'                          rng_seed = 456)
 #' }
 #'
@@ -486,7 +486,7 @@ do_impute_from_other <- function(x, col, col_from) {
 #' @param method Character string specifying the resolution method. Options are:
 #'   \itemize{
 #'     \item "min" - Use the earliest date in the range
-#'     \item "max" - Use the latest date in the range  
+#'     \item "max" - Use the latest date in the range
 #'     \item "middle" - Use the middle date of the range
 #'   }
 #'
@@ -497,7 +497,7 @@ do_impute_from_other <- function(x, col, col_from) {
 #' \dontrun{
 #' # Resolve to earliest dates in ranges
 #' mll %>% do_resolve_uncertain_date("date_onset", method = "min")
-#' 
+#'
 #' # Resolve to middle dates
 #' mll %>% do_resolve_uncertain_date("date_onset", method = "middle")
 #' }
@@ -507,27 +507,27 @@ do_resolve_uncertain_date <- function(x, col, method = c("min", "max", "middle")
   stopifnot(is_messy_linelist(x))
   if (col %in% get_true_cols(x)) stop("Cannot target true column.")
   if (!col %in% get_messy_cols(x)) stop("Column not found in messy columns: ", col)
-  
+
   method <- match.arg(method)
-  
+
   # Get the date range strings
   date_ranges <- x[[col]]
   resolved_dates <- rep(as.Date(NA), length(date_ranges))
-  
+
   # Process each date range
   for (i in seq_along(date_ranges)) {
     if (is.na(date_ranges[i])) {
       resolved_dates[i] <- as.Date(NA)
       next
     }
-    
+
     # Parse date range string (format: "YYYY-MM-DD to YYYY-MM-DD")
     if (grepl(" to ", date_ranges[i])) {
       parts <- strsplit(date_ranges[i], " to ")[[1]]
       if (length(parts) == 2) {
         start_date <- as.Date(parts[1])
         end_date <- as.Date(parts[2])
-        
+
         if (!is.na(start_date) && !is.na(end_date)) {
           resolved_dates[i] <- switch(method,
             "min" = start_date,
@@ -542,7 +542,7 @@ do_resolve_uncertain_date <- function(x, col, method = c("min", "max", "middle")
       resolved_dates[i] <- single_date
     }
   }
-  
+
   # Update the column
   set(x, j = col, value = resolved_dates)
   # log to history
@@ -569,7 +569,7 @@ do_resolve_uncertain_date <- function(x, col, method = c("min", "max", "middle")
 #' \dontrun{
 #' # Fill age column from multiple sources in order of preference
 #' mll %>% do_coalesce("age", c("age_years", "age_months", "age_estimated"))
-#' 
+#'
 #' # Combine location information
 #' mll %>% do_coalesce("location", c("address", "district", "region"))
 #' }
@@ -580,19 +580,19 @@ do_coalesce <- function(x, col, cols_from) {
   if (col %in% get_true_cols(x)) stop("Cannot target true column.")
   if (any(cols_from %in% get_true_cols(x))) stop("Cannot use true columns as source.")
   if (!col %in% get_messy_cols(x)) stop("Column not found in messy columns: ", col)
-  
+
   # Check that all source columns exist
   missing_cols <- setdiff(cols_from, get_messy_cols(x))
   if (length(missing_cols) > 0) {
     stop("Source column(s) not found in messy columns: ", paste(missing_cols, collapse = ", "))
   }
-  
+
   n_rows <- nrow(x)
-  
+
   # Initialize result with the same type as the target column
   target_col_value <- x[[col]]
   result_values <- target_col_value
-  
+
   # For each row, find the first non-NA value across source columns
   for (i in seq_len(n_rows)) {
     for (src_col in cols_from) {
@@ -603,11 +603,49 @@ do_coalesce <- function(x, col, cols_from) {
       }
     }
   }
-  
+
   # Update the target column
   set(x, j = col, value = result_values)
-  
+
   # log to history
   add_to_mll_history(x, "do_coalesce", list(col = col, cols_from = cols_from))
+  invisible(x)
+}
+
+do_impute_with_mean_delay <- function(x, col_target, col_reference) {
+  stopifnot(is_messy_linelist(x))
+  if (col_target %in% get_true_cols(x) || col_reference %in% get_true_cols(x)) {
+    stop("Cannot use true columns for imputation.")
+  }
+
+  # 1. Calculate the mean delay from complete cases
+  valid_mask <- !is.na(x[[col_target]]) & !is.na(x[[col_reference]])
+  valid_idx <- which(valid_mask)
+
+  if (length(valid_idx) == 0) {
+    stop("No complete pairs found to calculate a mean delay.")
+  }
+
+  # Ensure calculation is numeric to avoid difftime class issues
+  delays <- as.numeric(x[[col_reference]][valid_idx] - x[[col_target]][valid_idx])
+  mean_delay <- round(mean(delays))
+
+  # 2. Find rows that need imputation
+  impute_mask <- is.na(x[[col_target]]) & !is.na(x[[col_reference]])
+  impute_idx <- which(impute_mask)
+
+  if (length(impute_idx) == 0) return(invisible(x))
+
+  # 3. Calculate and inject the new values
+  imputed_values <- x[[col_reference]][impute_idx] - mean_delay
+  set(x, i = impute_idx, j = col_target, value = imputed_values)
+
+  # 4. Log the action (saving the calculated mean_delay for your records)
+  add_to_mll_history(
+    x,
+    "do_impute_with_mean_delay",
+    list(col_target = col_target, col_reference = col_reference, mean_delay_applied = mean_delay)
+  )
+
   invisible(x)
 }

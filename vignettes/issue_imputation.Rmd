@@ -41,10 +41,23 @@ pcd_data_function <- function(delay_data) {
 ll_clean <- readr::read_csv(here::here("data-raw", "clean_linelist.csv"))
 ```
 
+Some checking
+```{r}
+# date_reporting occur before date_onset
+
+ll_clean |>
+  filter(date_reporting < date_onset) |> 
+  nrow()
+```
+
+
 Setup a messy linelist
+
+(This is missing at random)
+
 ```{r}
 ll <- new_messy_linelist(ll_clean)
-be_missing(ll, "date_onset", prob = 0.5) # date of symptom onset missing with 50% probability
+be_missing(ll, "date_onset", prob = 0.5, rng_seed = 2026) # date of symptom onset missing with 50% probability
 ```
 
 ## Estimating the onset to admission delay distribution
@@ -108,6 +121,41 @@ pcd_fit_messy2 <- pcd_model$sample(
 )
 ```
 
+### Messy analysis 3:
+
+Compute a mean_delay = date_reporting - date_onset of non-missing cases
+
+Impute date_onset by date_reporting - mean_delay
+
+```{r}
+ll_messy3 <- copy(ll)
+do_impute_with_mean_delay(ll_messy3, "date_onset", "date_reporting")
+
+delay_data <- ll_messy3 |> 
+  mutate(delay = as.numeric(date_admission - date_onset)) |>
+  filter(delay >= 0) |>
+  group_by(delay) |>
+  summarise(n = n()) |>
+  ungroup() |>
+  transmute(
+    observed_delay = delay,
+    observed_delay_upper = delay + 1,
+    pwindow = 1,
+    D = max(delay, na.rm = TRUE) + 2,
+    n = n
+    )
+
+pcd_fit_messy3 <- pcd_model$sample(
+  data = pcd_data_function(delay_data),
+  chains = 4,
+  parallel_chains = 2, # Run 2 chains in parallel
+  threads_per_chain = 2, # Use 2 cores per chain
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+
 ### Correct analysis
 do not impute, instead assume:
 - earliest onset: earliest onset date in dataset, but not earlier than 8 weeks before admission
@@ -146,21 +194,22 @@ pcd_fit_correct <- pcd_model$sample(
 
 ## Results
 ```{r}
-rvars <- lapply(list(pcd_fit_messy, pcd_fit_messy2, pcd_fit_correct), function(x) posterior::as_draws_rvars(x$draws("params")))
+rvars <- lapply(list(pcd_fit_messy, pcd_fit_messy2, pcd_fit_messy3, pcd_fit_correct), function(x) posterior::as_draws_rvars(x$draws("params")))
 
 results_df <- data.frame(
-  Estimate = forcats::fct_inorder(c("Ad-hoc imputation\n(with asymptomatic)", "Ad-hoc imputation\n(only symptomatic)", "Missingness model\n(only symptomatic)")),
+  Estimate = forcats::fct_inorder(c("Ad-hoc imputation\n(with asymptomatic)", "Ad-hoc imputation\n(only symptomatic)", "Ad-hoc imputation\n(subtract mean delay)", "Missingness model\n(only symptomatic)")),
   mean_delay = t(do.call(cbind, lapply(rvars, function(x) exp(x$params[[1]] + x$params[[2]]^2 / 2))))
 )
 
 ggplot(results_df) +
   ggdist::stat_halfeye(aes(fill = Estimate, color = Estimate, xdist = mean_delay), alpha = 0.6) +
   geom_vline(xintercept = exp(1.5 + 0.5^2 / 2), color = "black", linetype = "dashed") +
-  scale_color_manual(values = c("#800000", "orange", "#125c87")) +
-  scale_fill_manual(values = c("#a00000", "orange", "#1a80bb")) +
+  scale_color_manual(values = c("#800000", "orange", "#2A9D8F", "#125c87")) +
+  scale_fill_manual(values = c("#a00000", "orange", "#2A9D8F", "#1a80bb")) +
   theme_bw() +
   theme(legend.position = "top") +
   labs(x = "Mean delay (days)", y = "Density")
 
-ggsave(here::here("vignettes", "figures", "issue_imputation.png"), width = 10, height = 6)
+# ggsave(here::here("vignettes", "figures", "issue_imputation.png"), width = 10, height = 6)
+# ggsave(here::here("vignettes", "figures", "issue_imputation_new.png"), width = 10, height = 6)
 ```

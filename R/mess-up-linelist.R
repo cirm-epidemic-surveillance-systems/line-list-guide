@@ -1,6 +1,6 @@
 ##' Imputes missing onset dates
 ##'
-##' Sets missing onset dates to the date of reporting.
+##' Sets missing onset dates to the date of admission
 ##'
 ##' @param ll Line list data frame
 ##' @return A data frame with the same columns as the input line list
