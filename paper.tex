@@ -1,0 +1,264 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{natbib}
+\bibliographystyle{unsrtnat}
+
+\title{Designing Line Lists for Epidemiological Analysis: A Practical Guide}
+
+\author{
+  % TODO: finalise author list
+  Author One\textsuperscript{1} \and
+  Author Two\textsuperscript{1} \and
+  Author Three\textsuperscript{2}
+}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  % TODO: write abstract
+\end{abstract}
+
+%% ============================================================
+\section{Introduction}
+%% ============================================================
+
+Epidemiological line lists are a foundational tool for outbreak analytics, capturing individual-level data on cases and enabling the estimation of key quantities such as transmission rates, severity ratios, and delay distributions.
+They are often among the earliest and most detailed sources of information available during an emerging outbreak, thus forming the basis for real-time assessment for situational awareness.
+
+However, line lists are frequently developed with priorities that do not align with analytical needs.
+Fields may be inconsistently defined, data entry practices vary widely, and metadata---such as when a field was last updated or the source of a value---is often sparse or absent.
+These limitations can constrain the ability to carry out robust, timely analyses or to reconstruct how data evolved over time.
+
+Improving the structure and documentation of line lists---without overburdening data collectors---may therefore yield clear benefit.
+By offering clear, analysis-oriented guidance on which fields to prioritise, how to define and manage them, and how to capture updates systematically, we aim to support the creation of line lists that inform relevant analyses.
+This guide focuses on illustrating biases that arise from common practices for line list data.
+Based on this it aims to give practical recommendations to maximise the value of line lists for modelling and inference.
+
+\subsection{Types of epidemiological analysis}
+
+A wide range of epidemiological analyses rely on individual-level line list data.
+Table~\ref{tab:analysis-types} summarises common analysis types and the key information required for each.
+
+\begin{table}[ht]
+  \centering
+  \caption{Types of epidemiological analysis and the line list columns they commonly require.}
+  \label{tab:analysis-types}
+  \begin{tabular}{p{4.5cm} p{9.5cm}}
+    \toprule
+    Type of Analysis & Key Information Required \\
+    \midrule
+    Severity (e.g.\ CFR, hospitalisation ratio)
+      & Outcome data (hospitalisation, death), dates of symptom onset, admission, outcome \\
+    Nowcasting (delay-adjusted estimates)
+      & Outcome date (symptom onset, admission, death), date of report/entry, timestamps for record updates \\
+    Transmissibility ($R_t$)
+      & Date of symptom onset (or closest proxy to exposure), dates of reporting/testing \\
+    Serial interval
+      & Dates of symptom onset for infector--infectee pairs \\
+    Incubation period
+      & Date of exposure, date of symptom onset \\
+    Health system delays (onset-to-admission, onset-to-death, length-of-stay)
+      & Dates of symptom onset, admission, discharge/death \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Additional covariates (e.g.\ age, sex, comorbidities) are often critical for severity analysis and other detailed studies but are not included here to maintain clarity on core fields.
+
+\subsection{Common data quality issues}
+
+Date of symptom onset features in all analysis types outlined above.
+It is central to epidemiological analyses primarily because:
+\begin{enumerate}
+  \item It is often the observable infection-related event closest to the frequently unobserved date of exposure/infection.
+  \item It directly relates to clinical severity and healthcare impact.
+\end{enumerate}
+
+Although many recording challenges apply broadly to various epidemiological dates, we specifically highlight symptom onset due to its analytical importance and recording complexity.
+Table~\ref{tab:onset-issues} summarises the key data quality issues associated with symptom onset dates.
+
+\begin{table}[ht]
+  \centering
+  \caption{Common data quality issues with symptom onset dates, their descriptions, and the biases they introduce.}
+  \label{tab:onset-issues}
+  \begin{tabular}{p{3.5cm} p{5cm} p{5.5cm}}
+    \toprule
+    Issue & Description & Impact / Bias \\
+    \midrule
+    Imputation and default values
+      & Symptom onset may be auto-filled (e.g.\ set equal to date of report) without explicit flags.
+      & Artificially shortens delays; obscures true symptom timing; distorts time-sensitive analyses. \\
+    Missingness
+      & Missing values may lack explanation---whether due to non-response, asymptomatic status, or omission.
+      & Reduces interpretability; introduces bias if missingness is non-random or varies over time. \\
+    Recall bias
+      & Individuals more accurately report recent symptom onset than distant events.
+      & Over-representation of short delays; can skew epidemic curves and serial interval estimates. \\
+    Uncertainty
+      & Onset dates may be approximate or poorly remembered.
+      & Leads to false precision; suppresses uncertainty in models and inference. \\
+    Resolution and rounding
+      & Respondents often approximate dates (e.g.\ ``about a week ago''), causing date heaping.
+      & Produces artificial spikes in symptom onset distribution; affects estimates of delay distributions. \\
+    Reporting scheme changes
+      & Case definitions or reporting criteria may change over time (e.g.\ hospitalised-only cases).
+      & Breaks in temporal continuity; hinders comparison across epidemic phases. \\
+    Inconsistent symptom definitions
+      & Different datasets or teams may apply inconsistent criteria (e.g.\ respiratory vs.\ rash).
+      & Undermines comparability; adds noise to time series; complicates pooling data. \\
+    Vagueness of `symptom onset'
+      & Onset may refer to any of several symptoms, which may occur at different times.
+      & Introduces ambiguity; weakens link between symptom onset and transmission or severity markers. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%% ============================================================
+\section{Methods}
+%% ============================================================
+
+To quantify the impact of common data quality issues on epidemiological inference, we adopted a simulation-based approach with three stages.
+
+\subsection{Stage 1: Generate clean baseline data}
+
+We constructed a reference line list containing complete, accurate epidemiological data for a simulated outbreak, including dates of symptom onset, admission, and outcome (death or recovery).
+This clean line list served as the ground truth against which the effects of data quality degradation were measured.
+
+\subsection{Stage 2: Introduce data quality issues}
+
+For each data quality issue, we systematically degraded the clean line list at varying levels of severity.
+Specifically, we considered the following scenarios:
+\begin{itemize}
+  \item \textbf{Imputation of missing onset dates:} 0--90\% of symptom onset dates were set to missing and then imputed using alternative date sources (e.g.\ date of report).
+  \item \textbf{Recall bias (missingness threshold):} 50\% of onset dates were set to missing, with a varying recall threshold window (1--9 days from date of report) determining which dates were lost.
+  \item \textbf{Noisy dates:} Symptom onset dates were perturbed using negative binomial noise with varying dispersion parameters, simulating random measurement error.
+  \item \textbf{Date rounding:} 0--90\% of onset dates were rounded to the nearest week, simulating loss of precision in date recording.
+  \item \textbf{Inconsistent symptom definitions:} We compared the effect of using different symptom onset definitions (e.g.\ mild vs.\ severe symptom onset) on delay estimation.
+  \item \textbf{Uncertain date ranges:} Onset dates were treated as uncertain to the week level, and we compared ad-hoc resolution (earliest date) with proper interval-censored modelling.
+\end{itemize}
+
+\subsection{Stage 3: Estimate and compare epidemiological quantities}
+
+For each scenario and severity level, we estimated delay distributions (onset-to-admission, onset-to-death) by fitting lognormal models to the observed delays.
+We extracted summary statistics including the median, mean, and standard deviation of delays, together with credible intervals.
+These estimates were compared against the clean baseline to quantify the direction and magnitude of bias introduced by each data quality issue.
+
+% TODO: add detail on statistical models and software used
+
+%% ============================================================
+\section{Results}
+%% ============================================================
+
+% TODO: introductory paragraph summarising key findings
+
+\subsection{Imputation of missing onset dates}
+
+% TODO: describe results from imputation simulations
+% TODO: add figure showing parameter estimates across severity levels
+
+\subsection{Missingness and recall bias}
+
+% TODO: describe results from missingness threshold simulations
+% TODO: add figure showing parameter estimates across recall windows
+
+\subsection{Uncertainty in dates}
+
+% TODO: describe results from noisy date simulations
+% TODO: add figure comparing ad-hoc vs.\ interval-censored approaches
+
+\subsection{Resolution and rounding}
+
+% TODO: describe results from date rounding simulations
+% TODO: add figure showing parameter estimates across rounding levels
+
+\subsection{Inconsistent symptom definitions}
+
+% TODO: describe results from symptom definition simulations
+% TODO: add figure comparing onset definitions
+
+\subsection{Recommendations}
+
+Based on the simulation results and the data quality issues outlined above, we offer the following recommendations for designing and maintaining epidemiological line lists.
+
+\subsubsection{General recommendations}
+
+\begin{enumerate}
+  \item \textbf{Clarify all types of missingness.}
+    Use structured missing codes or additional questions to distinguish between values that are unknown, not applicable, not asked, or not yet observed.
+    This applies across fields such as outcomes, exposures, and test results.
+    For instance, a missing outcome could mean the case is unresolved, lost to follow-up, or deceased but not yet recorded.
+
+  \item \textbf{Capture outcome status carefully.}
+    Track whether outcomes (e.g.\ death, recovery) are pending or final.
+    Clearly flag records with incomplete follow-up to avoid bias in severity or time-to-event analyses.
+
+  \item \textbf{Support uncertainty in dates.}
+    Where exact dates are unknown, allow for ranges or include an uncertainty indicator.
+    This avoids false precision in delay distributions and survival analyses.
+
+  \item \textbf{Timestamp field updates.}
+    Provide a time stamp for each data entry.
+    For subsequent changes, provide information not just what values change, but when those changes occur---especially for time-sensitive fields like testing, admission, or classification status.
+
+  \item \textbf{Document data collection protocols and changes.}
+    Maintain metadata about how and when the data was collected, and note any shifts in reporting schemes, inclusion criteria, or field definitions over time.
+\end{enumerate}
+
+\subsubsection{Recommendations specific to symptom onset data}
+
+\begin{enumerate}
+  \item \textbf{Avoid hidden imputation.}
+    Do not auto-fill missing symptom onset with other dates (e.g.\ date of report) unless explicitly flagged and documented.
+
+  \item \textbf{Use specific missingness codes for onset.}
+    Differentiate between asymptomatic cases, respondents who were not asked, and cases where the respondent could not recall the date.
+    Consider an additional field for ``onset status.''
+
+  \item \textbf{Record date of assessment.}
+    Capture when the symptom onset was reported or assessed to help evaluate recall bias and reporting delays.
+
+  \item \textbf{Allow for uncertainty and ranges.}
+    Accept date ranges (e.g.\ 10--12 March) or use uncertainty flags when respondents are unsure of the exact onset date.
+
+  \item \textbf{Flag rounding or heaping.}
+    When onset is reported approximately (e.g.\ ``about a week ago''), allow data entry systems to capture this explicitly and flag the record as approximate.
+
+  \item \textbf{Standardise onset definitions.}
+    Use clear guidance on what qualifies as ``symptom onset'' (e.g.\ first respiratory symptom vs.\ rash).
+    If necessary, allow multiple onset fields for syndromes with distinct symptom phases.
+
+  \item \textbf{Disaggregate complex presentations.}
+    For illnesses with staged symptoms (e.g.\ fever followed by rash), consider recording separate onset dates for different key symptoms, particularly if they relate to transmission dynamics.
+
+  \item \textbf{Track changes in reporting practices.}
+    Keep a record of changes in which cases are included (e.g.\ inclusion of only hospitalised cases), as this can significantly affect symptom onset distributions.
+
+  \item \textbf{Create a timeline sequence.}
+    Capture exposure and symptoms timeline by creating a sequence.
+    For example: exposure date $\to$ first mild symptom $\to$ first major symptom $\to$ healthcare visit $\to$ hospitalisation.
+
+  \item \textbf{Geo-tag onset context.}
+    Capture where the case was physically located when symptoms began (e.g.\ home, work, travel), especially useful for spatial-temporal modelling.
+\end{enumerate}
+
+%% ============================================================
+\section{Discussion}
+%% ============================================================
+
+% TODO: write discussion
+
+%% ============================================================
+\bibliography{references}
+
+\end{document}

@@ -6,3 +6,15 @@
 
 *.html
 *_files/
+
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.pdf
+*.zip
+
+# Quarto/knitr caches
+*_cache/
