@@ -1,0 +1,302 @@
+---
+title: "Estimating delays under recall-biased symptom onset reporting"
+---
+
+## Setup
+```{r}
+knitr::opts_chunk$set(cache = FALSE)
+library(dplyr)
+library(ggplot2)
+source(here::here("R", "mess-up-linelist.R"))
+source(here::here("R", "messy-linelist.R"))
+
+library(primarycensored)
+library(cmdstanr)
+```
+
+## Primarycensored setup
+```{r}
+pcd_model <- pcd_cmdstan_model(cpp_options = list(stan_threads = FALSE))
+```
+```{r}
+pcd_data_function <- function(delay_data) {
+  pcd_data <- pcd_as_stan_data(
+    delay_data,
+    delay = "observed_delay",
+    delay_upper = "observed_delay_upper",
+    relative_obs_time = "D",
+    pwindow = "pwindow",
+    dist_id = pcd_stan_dist_id("lognormal", "delay"),
+    primary_id = pcd_stan_dist_id("uniform", "primary"),
+    param_bounds = list(lower = c(-Inf, 0), upper = c(Inf, Inf)),
+    primary_param_bounds = list(lower = numeric(0), upper = numeric(0)),
+    priors = list(location = c(1, 0.5), scale = c(1, 0.5)),
+    primary_priors = list(location = numeric(0), scale = numeric(0)),
+    use_reduce_sum = FALSE # use within chain parallelisation
+  )
+}
+```
+
+## Data preparation
+```{r}
+ll_clean <- readr::read_csv(here::here("data-raw", "clean_linelist.csv")) |>
+  filter(asymptomatic == FALSE, !is.na(date_onset), !is.na(date_admission))
+
+day_90_observed <- 1
+day_50_observed <- 7
+day_10_observed <- 2 * day_50_observed - day_90_observed
+
+ll_recall <- add_recall_missing(
+  ll_clean,
+  day_90_observed = day_90_observed,
+  day_50_observed = day_50_observed,
+  rng_seed = 2026
+)
+
+ll <- new_messy_linelist(ll_clean)
+ll[, date_onset := ll_recall$date_onset]
+```
+
+## The recall bias mechanism
+```{r}
+recall_curve <- data.frame(
+  true_delay = 0:max(as.numeric(ll$date_admission_true - ll$date_onset_true), na.rm = TRUE)
+) |>
+  mutate(
+    p_observed_recall = plogis(
+      qlogis(0.9) +
+        (true_delay - day_90_observed) *
+        (qlogis(0.5) - qlogis(0.9)) /
+        (day_50_observed - day_90_observed)
+    )
+  )
+
+recall_empirical <- ll |>
+  transmute(
+    true_delay = as.numeric(date_admission_true - date_onset_true),
+    onset_observed = !is.na(date_onset)
+  ) |>
+  filter(true_delay >= 0) |>
+  group_by(true_delay) |>
+  summarise(
+    p_observed_empirical = mean(onset_observed),
+    n = n(),
+    .groups = "drop"
+  )
+
+ggplot() +
+  geom_line(
+    data = recall_curve,
+    aes(x = true_delay, y = p_observed_recall),
+    linewidth = 1.1,
+    color = "#125c87"
+  ) +
+  geom_point(
+    data = recall_empirical,
+    aes(x = true_delay, y = p_observed_empirical, size = n),
+    color = "#a00000",
+    alpha = 0.7
+  ) +
+  geom_vline(xintercept = c(day_90_observed, day_50_observed, day_10_observed),
+             linetype = c("dashed", "dashed", "dotted"),
+             color = c("#125c87", "#800000", "grey40")) +
+  theme_bw() +
+  labs(
+    x = "True onset-to-admission delay (days)",
+    y = "Probability onset date is observed",
+    size = "Records"
+  )
+```
+
+## Comparing approaches to recall bias
+
+### Unsuitable approach 1: Complete-case analysis
+```{r}
+delay_data <- ll |>
+  filter(!is.na(date_onset)) |>
+  mutate(delay = as.numeric(date_admission - date_onset)) |>
+  filter(delay >= 0) |>
+  group_by(delay) |>
+  summarise(n = n()) |>
+  ungroup() |>
+  transmute(
+    observed_delay = delay,
+    observed_delay_upper = delay + 1,
+    pwindow = 1,
+    D = max(delay, na.rm = TRUE) + 2,
+    n = n
+  )
+
+pcd_fit_complete_case <- pcd_model$sample(
+  data = pcd_data_function(delay_data),
+  chains = 4,
+  parallel_chains = 2,
+  threads_per_chain = 2,
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+### Unsuitable approach 2: Ad-hoc imputation using date of report
+```{r}
+ll_impute_report <- data.table::copy(ll)
+do_impute_from_other(ll_impute_report, "date_onset", "date_reporting")
+
+delay_data <- ll_impute_report |>
+  mutate(delay = as.numeric(date_admission - date_onset)) |>
+  filter(delay >= 0) |>
+  group_by(delay) |>
+  summarise(n = n()) |>
+  ungroup() |>
+  transmute(
+    observed_delay = delay,
+    observed_delay_upper = delay + 1,
+    pwindow = 1,
+    D = max(delay, na.rm = TRUE) + 2,
+    n = n
+  )
+
+pcd_fit_impute_report <- pcd_model$sample(
+  data = pcd_data_function(delay_data),
+  chains = 4,
+  parallel_chains = 2,
+  threads_per_chain = 2,
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+### Suitable approach 1: Broad censoring model
+Assume missing onset dates are only known to have happened within 8 weeks before
+admission.
+```{r}
+delay_data <- ll |>
+  mutate(
+    earliest_onset_date = date_admission - day_10_observed,
+    latest_onset_date = date_admission
+  ) |>
+  mutate(
+    delay = as.numeric(date_admission - if_else(is.na(date_onset), earliest_onset_date, date_onset)),
+    pwindow = if_else(is.na(date_onset), as.numeric(latest_onset_date - earliest_onset_date) + 1, 1)
+  ) |>
+  filter(delay >= 0) |>
+  group_by(delay, pwindow) |>
+  summarise(n = n()) |>
+  ungroup() |>
+  transmute(
+    observed_delay = delay,
+    observed_delay_upper = delay + 1,
+    pwindow = pwindow,
+    D = max(delay, na.rm = TRUE) + 2,
+    n = n
+  )
+
+pcd_fit_censor_broad <- pcd_model$sample(
+  data = pcd_data_function(delay_data),
+  chains = 4,
+  parallel_chains = 2,
+  threads_per_chain = 2,
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+### Suitable approach 2: Recall-informed sensitivity analysis
+Use the assumed recall curve to define a tighter onset window. Under the
+logistic recall model, the day at which only 10% of dates are still observed is
+`2 * day_50_observed - day_90_observed`.
+```{r}
+delay_data <- ll |>
+  mutate(
+    earliest_onset_date = date_admission - day_10_observed,
+    latest_onset_date = date_admission
+  ) |>
+  mutate(
+    delay = as.numeric(date_admission - if_else(is.na(date_onset), earliest_onset_date, date_onset)),
+    pwindow = if_else(is.na(date_onset), as.numeric(latest_onset_date - earliest_onset_date) + 1, 1)
+  ) |>
+  filter(delay >= 0) |>
+  group_by(delay, pwindow) |>
+  summarise(n = n()) |>
+  ungroup() |>
+  transmute(
+    observed_delay = delay,
+    observed_delay_upper = delay + 1,
+    pwindow = pwindow,
+    D = max(delay, na.rm = TRUE) + 2,
+    n = n
+  )
+
+pcd_fit_censor_recall <- pcd_model$sample(
+  data = pcd_data_function(delay_data),
+  chains = 4,
+  parallel_chains = 2,
+  threads_per_chain = 2,
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+## Results
+```{r}
+pcd_fit_truth <- pcd_model$sample(
+  data = ll_clean |>
+    mutate(delay = as.numeric(date_admission - date_onset)) |>
+    filter(delay >= 0) |>
+    group_by(delay) |>
+    summarise(n = n()) |>
+    ungroup() |>
+    transmute(
+      observed_delay = delay,
+      observed_delay_upper = delay + 1,
+      pwindow = 1,
+      D = max(delay, na.rm = TRUE) + 2,
+      n = n
+    ) |>
+    pcd_data_function(),
+  chains = 4,
+  parallel_chains = 2,
+  threads_per_chain = 2,
+  refresh = ifelse(interactive(), 50, 0),
+  show_messages = interactive()
+)
+```
+
+```{r}
+rvars <- lapply(
+  list(
+    pcd_fit_complete_case,
+    pcd_fit_impute_report,
+    pcd_fit_censor_broad,
+    pcd_fit_censor_recall
+  ),
+  function(x) posterior::as_draws_rvars(x$draws("params"))
+)
+
+truth_mean_delay <- pcd_fit_truth$summary(c("params[1]", "params[2]"))
+truth_mean_delay <- exp(truth_mean_delay$mean[1] + truth_mean_delay$mean[2]^2 / 2)
+
+results_df <- data.frame(
+  Estimate = forcats::fct_inorder(c(
+    "Complete cases\n(unsuitable)",
+    "Report-date imputation\n(unsuitable)",
+    "Broad censoring window\n(suitable)",
+    "Recall-informed bound\n(suitable)"
+  )),
+  mean_delay = t(do.call(cbind, lapply(
+    rvars,
+    function(x) exp(x$params[[1]] + x$params[[2]]^2 / 2)
+  )))
+)
+
+ggplot(results_df) +
+  ggdist::stat_halfeye(aes(fill = Estimate, color = Estimate, xdist = mean_delay), alpha = 0.6) +
+  geom_vline(xintercept = truth_mean_delay, color = "black", linetype = "dashed") +
+  scale_color_manual(values = c("#800000", "orange", "#125c87", "#2A9D8F")) +
+  scale_fill_manual(values = c("#a00000", "orange", "#1a80bb", "#2A9D8F")) +
+  theme_bw() +
+  theme(legend.position = "top") +
+  labs(x = "Mean delay (days)", y = "Density")
+
+# ggsave(here::here("vignettes", "figures", "issue_recall_bias_approaches.png"), width = 10, height = 6)
+```
